@@ -1,0 +1,140 @@
+<style>
+.red{ 
+border-color: #e02c2c; 
+color: #e02c2c; 
+} 
+</style>
+<?php 
+<?php
+function requestToDataBase($query){ 
+ define("DB_HOST", "localhost"); 
+ define("DB_USER", "root"); 
+ define("DB_PASSWORD", "*14518A9PE"); 
+ define("DB_NAME", "db1"); 
+ $link = mysqli_connect(DB_HOST, DB_USER, DB_PASSWORD, DB_NAME) or die(mysqli_error($link)
+ $request = mysqli_query($link, $query) or die(mysqli_error($link)); 
+ return $request; 
+}
+ 
+ //Форма реєстрації
+ function formRegistration(){ ?>
+ <form action="" method="POST">
+ <?php if($_REQUEST['badLogin']==1) {?> <p class="red" ><?php echo  $_REQUEST['exeptionLogin'] ?></p> <?php } ?>
+<label for="login">Логін:</label> 
+<input  <?php if($_REQUEST['badLogin']==1){?> class="red"  <?php } ?> name="login" required id="login" type="text" value="<?php echo $_REQUEST['login'] ?>" ><br><br> 
+ <?php if($_REQUEST['badPassword']==1) {?> <p class="red" ><?php echo  $_REQUEST['exeptionPassword'] ?></p> <?php } ?>
+<label for="password">Пароль:</label> 
+<input <?php if($_REQUEST['badPassword']==1){?> class="red"  <?php } ?> name="password" required id="password" type="password"><br><br> 
+<label for="check_password">Повторіть пароль:</label> 
+<input name="check_password" required id="check_password" type="password"><br><br> 
+<label for="name">Ім'я:</label> 
+<input name="name" required id="name" type="text" value="<?php echo $_REQUEST['name'] ?>"><br><br> 
+<label for="surname">Прізвище:</label> 
+<input name="surname" required id="surname" type="text" value="<?php echo $_REQUEST['surname'] ?>"><br><br> 
+<label for="age">Вік:</label> 
+<input name="age" required id="age" type="text" value="<?php echo trim($_REQUEST['age']) ?>"><br><br> 
+    <?php if ($REQUEST['badEmail']==1) {?> <p class='red' ><?php echo $REQUEST['exceptionEmail']?></p> <?php } ?> 
+<label for="email">Email:</label> 
+<input name="email"   <?php if ($REQUEST['badEmail']==1) {?> class='red' <?php } ?> required id="email" type="email" value="<?php echo $_REQUEST['email'] ?>"><br><br> 
+<label for="city">Місто:</label> 
+<input name="city" required id="city" type="text" value="<?php echo $_REQUEST['city'] ?>"><br><br> 
+<label for="language">Мова:</label> 
+<select name="language" id="language" > 
+<option value="ukraine"<?php if($_REQUEST['language'] == 'ukraine'){?> selected <?php } ?>>Украинский</option> 
+<option value="russian" <?php if($_REQUEST['language'] == 'russian'){?> selected <?php } ?>>Руский</option> 
+<option value="english"  <?php if($_REQUEST['language'] == 'english'){?> selected <?php } ?>>Китайский</option> 
+</select><br><br> 
+<input value="Registration" type="submit" name="reg"><br> 
+</form> 
+<?php } 
+ 
+ //Генератор солі
+ function generateSalt()
+	{
+		$salt = '';
+		$saltLength = 8; //длина соли
+		for($i=0; $i<$saltLength; $i++)
+		{
+			$salt .= chr(mt_rand(33,126)); //символ из ASCII-table
+		}
+		return $salt;
+	}
+
+//Перевірка логіна на унікальність
+function checkLogin($login,$query){
+	
+	$count = mysqli_fetch_row(requestToDataBase($query));
+ if($count[0] > 0 ){
+	 $check = false;
+ }else{
+	 $check = true;
+ }
+ return $check;
+}
+
+//Солення пароля
+function saltPassword($password, $salt){
+	//Солимо пароль
+	 $saltedPassword = md5($password.$salt);
+
+	return $saltedPassword;
+}
+ 
+
+	$validate = true;
+	//Валідація пароля
+ if(!(preg_match('#[a-zA-Z0-9]{6,10}#', $_REQUEST['password'])) AND !empty($_REQUEST['reg'])){
+
+		$validate = false;
+		 $_REQUEST['badPassword'] = 1;
+ $_REQUEST['exeptionPassword']=  "Пароль повинен містити від 6 до 10 символів";}
+
+ //Валідаця логіна
+ if(!(preg_match('#[a-zA-Z0-9]{4,12}#', $_REQUEST['login'])) AND !empty($_REQUEST['reg'])){
+		$validate = false;
+		 $_REQUEST['badLogin'] = 1;
+ $_REQUEST['exeptionLogin']= "Логін повинен містити від 4 до 12 символів";
+
+ }
+
+  //Валідаця віку
+ if(!(preg_match('#^[a-zA-Z-.]+@[a-z]+\.[a-z]{2,3}$#', $_REQUEST['email'])) AND !empty($_REQUEST['reg'])){
+		$validate = false;
+		 $_REQUEST['badEmail'] = 1;
+ $_REQUEST['exeptionEmail']=  "Неправильний email";}
+
+ if(!empty($_REQUEST['reg']) AND $validate == true){ 
+ 
+ $login = $_REQUEST['login']; 
+ $password = $_REQUEST['password']; 
+ $name = $_REQUEST['name']; 
+ $surname = $_REQUEST['surname']; 
+ $age = $_REQUEST['age']; 
+ $email = $_REQUEST['email']; 
+ $city = $_REQUEST['city']; 
+ $language = $_REQUEST['language']; 
+ 
+ if($password == $_REQUEST['check_password']){ 
+ 
+//Перевіряєм чи існує логін
+ $query = 'SELECT COUNT(*) FROM people WHERE login = "'.$_REQUEST['login'].'"';
+ $checkLogin = checkLogin($login,$query);
+	if($checkLogin){
+		$salt = generateSalt();
+ $saltedPassword = saltPassword($password, $salt);		
+ $date = date("Y-m-d H:i:s"); 
+ //Додавання юзера до бази 
+ $queryInsert= 'INSERT INTO people SET login = "'.$login.'", password = "'.$saltedPassword.'", name = "'.$name.'", 
+ surname = "'.$surname.'", age = "'.$age.'", email = "'.$email.'", city = "'.$city.'", language = "'.$language.'", salt="'.$salt.'", 
+ date = "'.$date.'"'; 
+ requestToDataBase($queryInsert); 
+ echo "Користувач успішно доданий"; 
+ }else{
+	echo "Такий логін існує";
+	formRegistration();}
+ }else{
+	echo "Паролі не співпадають"; 
+	formRegistration();}
+ }else{ 
+formRegistration();
+ } ?>
